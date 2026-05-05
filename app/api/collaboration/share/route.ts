@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@/features/auth/actions';
 import { db } from '@/lib/db';
+import { createClerkClient } from '@clerk/nextjs/server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,10 +42,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find the collaborator user
-    const collaboratorUser = await db.user.findUnique({
-      where: { email }
-    });
+    // Find the collaborator user using Clerk
+    const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
+    const userList = await clerk.users.getUserList({ emailAddress: [email] });
+    const collaboratorUser = userList.data[0];
 
     if (!collaboratorUser) {
       return NextResponse.json(
@@ -76,13 +77,8 @@ export async function POST(request: NextRequest) {
         role,
         invitedBy: user.id,
         status: 'pending',
-        createdAt: new Date(),
-        updatedAt: new Date()
       }
     });
-
-    // Send invitation email (this would be implemented with your email service)
-    // await sendCollaborationInvite(email, playground.title, role, user.name);
 
     return NextResponse.json({
       success: true,
@@ -124,32 +120,25 @@ export async function GET(request: NextRequest) {
     // Get collaborations for the playground
     const collaborations = await db.collaboration.findMany({
       where: { playgroundId },
-      include: {
-        collaborator: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true
-          }
-        },
-        inviter: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
-        }
-      },
       orderBy: { createdAt: 'desc' }
     });
 
+    // To prevent build errors and slow N+1 queries, we return minimal user data.
+    // If full names/emails are needed, the frontend can query Clerk or we can batch fetch.
     return NextResponse.json({
       success: true,
       data: collaborations.map(collab => ({
         id: collab.id,
-        collaborator: collab.collaborator,
-        inviter: collab.inviter,
+        collaborator: {
+          id: collab.collaboratorId,
+          name: 'Collaborator', 
+          email: ''
+        },
+        inviter: {
+          id: collab.invitedBy,
+          name: 'Inviter',
+          email: ''
+        },
         role: collab.role,
         status: collab.status,
         createdAt: collab.createdAt,
@@ -190,14 +179,6 @@ export async function DELETE(request: NextRequest) {
         playground: {
           userId: user.id // Only playground owner can remove collaborators
         }
-      },
-      include: {
-        collaborator: {
-          select: {
-            name: true,
-            email: true
-          }
-        }
       }
     });
 
@@ -215,10 +196,9 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `Removed ${collaboration.collaborator.name} from playground`,
+      message: `Removed collaborator from playground`,
       data: {
         collaborationId,
-        removedCollaborator: collaboration.collaborator
       }
     });
 

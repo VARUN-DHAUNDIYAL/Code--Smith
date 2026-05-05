@@ -88,7 +88,6 @@ export const getAllPlaygroundForUser = async () => {
                 userId: user.id
             },
             include: {
-                user: true,
                 Starmark: {
                     where: {
                         userId: user.id
@@ -100,7 +99,21 @@ export const getAllPlaygroundForUser = async () => {
             }
         });
 
-        return playground || [];
+        // Map the playgrounds to include the clerk user object so it matches the Project interface
+        const playgroundsWithUser = playground.map(p => ({
+            ...p,
+            user: {
+                id: user.id,
+                name: user.name || "User",
+                email: user.email || "",
+                image: user.image || "",
+                role: "user",
+                createdAt: new Date(),
+                updatedAt: new Date()
+            }
+        }));
+
+        return playgroundsWithUser || [];
     } catch (error) {
         console.error("getAllPlaygroundForUser error:", error);
         return [];

@@ -1,12 +1,7 @@
-import { Templates, User, Playground, TemplateFile } from '@prisma/client';
+import { Templates, Playground, TemplateFile } from '@prisma/client';
 
 export interface PlaygroundWithRelations extends Playground {
   templateFiles?: TemplateFile[];
-  user?: User;
-}
-
-export interface UserWithRelations extends User {
-  playgrounds?: Playground[];
 }
 
 export interface ApiResponse<T> {

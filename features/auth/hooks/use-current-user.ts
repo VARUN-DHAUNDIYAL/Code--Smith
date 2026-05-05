@@ -1,8 +1,14 @@
-import { useSession } from "next-auth/react";
+import { useUser } from "@clerk/nextjs";
 
+export const useCurrentUser = () => {
+    const { user } = useUser();
+    
+    if (!user) return null;
 
-export const useCurrentUser = ()=>{
-    const session = useSession();
-
-    return session?.data?.user
-}
+    return {
+        id: user.id,
+        email: user.primaryEmailAddress?.emailAddress ?? "",
+        name: user.fullName ?? "",
+        image: user.imageUrl ?? ""
+    };
+};
