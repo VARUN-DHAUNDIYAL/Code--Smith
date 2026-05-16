@@ -1,10 +1,8 @@
-interface TemplateItem {
-  filename: string;
-  fileExtension: string;
-  content: string;
-  folderName?: string;
-  items?: TemplateItem[];
-}
+import type {
+  TemplateFile,
+  TemplateFolder,
+  TemplateItem,
+} from "@/features/playground/libs/path-to-json";
 
 interface WebContainerFile {
   file: {
@@ -18,42 +16,48 @@ interface WebContainerDirectory {
   };
 }
 
-type WebContainerFileSystem = Record<string, WebContainerFile | WebContainerDirectory>;
+type WebContainerFileSystem = Record<
+  string,
+  WebContainerFile | WebContainerDirectory
+>;
 
-export function transformToWebContainerFormat(template: { folderName: string; items: TemplateItem[] }): WebContainerFileSystem {
-  function processItem(item: TemplateItem): WebContainerFile | WebContainerDirectory {
-    if (item.folderName && item.items) {
-      // This is a directory
-      const directoryContents: WebContainerFileSystem = {};
-      
-      item.items.forEach(subItem => {
-        const key = subItem.fileExtension 
-          ? `${subItem.filename}.${subItem.fileExtension}`
-          : subItem.folderName!;
-        directoryContents[key] = processItem(subItem);
-      });
+function isTemplateFolder(item: TemplateItem): item is TemplateFolder {
+  return "items" in item;
+}
 
-      return {
-        directory: directoryContents
-      };
-    } else {
-      // This is a file
-      return {
-        file: {
-          contents: item.content
-        }
-      };
+function processItem(item: TemplateItem): WebContainerFile | WebContainerDirectory {
+  if (isTemplateFolder(item)) {
+    const directoryContents: WebContainerFileSystem = {};
+
+    for (const subItem of item.items) {
+      const key = isTemplateFolder(subItem)
+        ? subItem.folderName
+        : `${subItem.filename}.${subItem.fileExtension}`;
+      directoryContents[key] = processItem(subItem);
     }
+
+    return { directory: directoryContents };
   }
 
+  const file = item as TemplateFile;
+  return {
+    file: {
+      contents: file.content,
+    },
+  };
+}
+
+export function transformToWebContainerFormat(
+  template: TemplateFolder
+): WebContainerFileSystem {
   const result: WebContainerFileSystem = {};
-  
-  template.items.forEach(item => {
-    const key = item.fileExtension 
-      ? `${item.filename}.${item.fileExtension}`
-      : item.folderName!;
+
+  for (const item of template.items) {
+    const key = isTemplateFolder(item)
+      ? item.folderName
+      : `${item.filename}.${item.fileExtension}`;
     result[key] = processItem(item);
-  });
+  }
 
   return result;
 }

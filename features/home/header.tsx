@@ -79,7 +79,7 @@ export function Header() {
                   {/* <HeaderPro /> */}
                   <ThemeToggle />
                   <Show when="signed-in">
-                    <UserButton afterSignOutUrl="/" />
+                    <UserButton />
                   </Show>
                   <Show when="signed-out">
                     <Button variant="outline" size="sm" asChild>
@@ -104,7 +104,7 @@ export function Header() {
                   </Link>
                   <ThemeToggle />
                   <Show when="signed-in">
-                    <UserButton afterSignOutUrl="/" />
+                    <UserButton />
                   </Show>
                   <Show when="signed-out">
                     <Button variant="outline" size="sm" asChild>
