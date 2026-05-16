@@ -1,0 +1,73 @@
+// Analytics models to be added to schema.prisma
+
+enum MetricType {
+  CODE_QUALITY
+  PERFORMANCE
+  COLLABORATION
+  AI_USAGE
+}
+
+model ProjectMetrics {
+  id           String     @id @default(cuid()) @map("_id")
+  playgroundId String
+  metricType   MetricType
+  metricName   String
+  metricValue  Float
+  timestamp    DateTime   @default(now())
+
+  playground   Playground @relation(fields: [playgroundId], references: [id], onDelete: Cascade)
+
+  @@index([playgroundId])
+  @@index([metricType])
+  @@index([timestamp])
+}
+
+model UserProductivity {
+  id           String   @id @default(cuid()) @map("_id")
+  userId       String
+  playgroundId String
+  activityType String   // 'CODE_EDIT', 'AI_USAGE', 'COLLABORATION', 'GIT_OPERATION'
+  duration     Int      // Duration in seconds
+  timestamp    DateTime @default(now())
+
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  playground   Playground @relation(fields: [playgroundId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([playgroundId])
+  @@index([timestamp])
+}
+
+model CodeQualityMetrics {
+  id              String   @id @default(cuid()) @map("_id")
+  playgroundId    String
+  fileId          String?
+  linesOfCode     Int?
+  complexity      Float?
+  duplications    Float?
+  bugs            Int?
+  vulnerabilities Int?
+  codeSmells      Int?
+  timestamp       DateTime @default(now())
+
+  playground      Playground @relation(fields: [playgroundId], references: [id], onDelete: Cascade)
+
+  @@index([playgroundId])
+  @@index([timestamp])
+}
+
+model AIUsageMetrics {
+  id             String   @id @default(cuid()) @map("_id")
+  userId         String
+  playgroundId   String
+  suggestionType String   // 'CODE_COMPLETION', 'ERROR_FIX', 'REFACTORING', 'DOCUMENTATION'
+  accepted       Boolean
+  timestamp      DateTime @default(now())
+
+  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  playground     Playground @relation(fields: [playgroundId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([playgroundId])
+  @@index([timestamp])
+}

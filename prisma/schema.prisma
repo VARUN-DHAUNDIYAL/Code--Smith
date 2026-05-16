@@ -1,0 +1,185 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum Templates{
+  REACT
+  NEXTJS
+  EXPRESS
+  VUE
+  HONO
+  ANGULAR
+}
+
+model Playground {
+  id String @id @default(cuid()) @map("_id")
+  title String
+  description String?
+  template  Templates  @default(REACT)
+  templateFiles TemplateFile[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  Starmark  StarMark[]
+  userId String 
+  
+  // Collaboration relations
+  collaborations Collaboration[]
+  
+  // Activity logs
+  activityLogs ActivityLog[]
+  
+  // Analytics relations
+  projectMetrics ProjectMetrics[]
+  userProductivity UserProductivity[]
+  codeQualityMetrics CodeQualityMetrics[]
+  aiUsageMetrics AIUsageMetrics[]
+}
+
+
+model StarMark{
+  id String @id @default(cuid()) @map("_id")
+  userId String
+  playgroundId String
+  isMarked Boolean
+  createdAt DateTime @default(now())
+  playground Playground @relation(fields: [playgroundId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, playgroundId])
+
+}
+
+model TemplateFile {
+  id String @id @default(cuid()) @map("_id")
+  content Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  playgroundId String @unique
+  playground Playground @relation(fields: [playgroundId], references: [id], onDelete: Cascade)
+}
+
+// Collaboration model for real-time collaboration
+model Collaboration {
+  id            String   @id @default(cuid()) @map("_id")
+  playgroundId  String
+  collaboratorId String
+  role          String   // "editor" or "viewer"
+  status        String   // "pending", "accepted", "declined"
+  invitedBy     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  playground    Playground @relation(fields: [playgroundId], references: [id], onDelete: Cascade)
+
+  @@unique([playgroundId, collaboratorId])
+  @@index([playgroundId])
+  @@index([collaboratorId])
+}
+
+// Activity log for audit trails
+model ActivityLog {
+  id           String   @id @default(cuid()) @map("_id")
+  playgroundId String
+  userId       String
+  action       String   // "file_save", "file_create", "file_delete", "ai_suggestion", "collaboration", "git_commit"
+  details      Json
+  createdAt    DateTime @default(now())
+
+  playground   Playground @relation(fields: [playgroundId], references: [id], onDelete: Cascade)
+
+  @@index([playgroundId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// New model for AI chat messages
+model ChatMessage {
+  id        String   @id @default(cuid()) @map("_id")
+  userId    String
+  role      String   // "user" or "assistant"
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// Analytics models
+enum MetricType {
+  CODE_QUALITY
+  PERFORMANCE
+  COLLABORATION
+  AI_USAGE
+}
+
+model ProjectMetrics {
+  id           String     @id @default(cuid()) @map("_id")
+  playgroundId String
+  metricType   MetricType
+  metricName   String
+  metricValue  Float
+  timestamp    DateTime   @default(now())
+
+  playground   Playground @relation(fields: [playgroundId], references: [id], onDelete: Cascade)
+
+  @@index([playgroundId])
+  @@index([metricType])
+  @@index([timestamp])
+}
+
+model UserProductivity {
+  id           String   @id @default(cuid()) @map("_id")
+  userId       String
+  playgroundId String
+  activityType String   // 'CODE_EDIT', 'AI_USAGE', 'COLLABORATION', 'GIT_OPERATION'
+  duration     Int      // Duration in seconds
+  timestamp    DateTime @default(now())
+
+  playground   Playground @relation(fields: [playgroundId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([playgroundId])
+  @@index([timestamp])
+}
+
+model CodeQualityMetrics {
+  id              String   @id @default(cuid()) @map("_id")
+  playgroundId    String
+  fileId          String?
+  linesOfCode     Int?
+  complexity      Float?
+  duplications    Float?
+  bugs            Int?
+  vulnerabilities Int?
+  codeSmells      Int?
+  timestamp       DateTime @default(now())
+
+  playground      Playground @relation(fields: [playgroundId], references: [id], onDelete: Cascade)
+
+  @@index([playgroundId])
+  @@index([timestamp])
+}
+
+model AIUsageMetrics {
+  id             String   @id @default(cuid()) @map("_id")
+  userId         String
+  playgroundId   String
+  suggestionType String   // 'CODE_COMPLETION', 'ERROR_FIX', 'REFACTORING', 'DOCUMENTATION'
+  accepted       Boolean
+  timestamp      DateTime @default(now())
+
+  playground     Playground @relation(fields: [playgroundId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([playgroundId])
+  @@index([timestamp])
+}
